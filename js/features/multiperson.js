@@ -1,77 +1,75 @@
 let model;
-let peopleCount = 0;
 let isCounting = false;
+let lastCountTime = 0;
+const countInterval = 400;
 
 export async function init({ videoElement, canvasElement, statusElement }) {
   statusElement.textContent = 'Loading people detection model...';
-  
+
   try {
-    // Dispose previous model if exists
-    if (model) {
-      await model.dispose();
-    }
-    
+    if (model) await model.dispose();
     model = await cocoSsd.load();
-    statusElement.textContent = 'Model loaded. Counting people...';
+    
+    statusElement.textContent = 'People counter ready. Point at a crowd!';
     isCounting = true;
-    countPeople(videoElement, canvasElement, statusElement);
-  } catch (error) {
+    runPeopleCounter(videoElement, canvasElement, statusElement);
+  } catch (err) {
+    console.error('People model error:', err);
     statusElement.textContent = 'Failed to load people counter';
     statusElement.style.color = '#f00';
-    console.error(error);
   }
 }
 
-async function countPeople(video, canvas, status) {
-  if (!isCounting || video.paused || video.ended) {
+async function runPeopleCounter(video, canvas, status) {
+  if (!isCounting || video.paused || video.ended) return;
+
+  const now = Date.now();
+  if (now - lastCountTime < countInterval) {
+    requestAnimationFrame(() => runPeopleCounter(video, canvas, status));
     return;
   }
+  lastCountTime = now;
 
   try {
     const predictions = await model.detect(video);
     const people = predictions.filter(p => p.class === 'person' && p.score > 0.7);
     
-    if (people.length !== peopleCount) {
-      peopleCount = people.length;
-      status.textContent = `People detected: ${peopleCount}`;
-    }
-    
     renderPeople(canvas, people);
-  } catch (error) {
-    if (error.message.includes('Tensor is disposed')) {
-      console.warn('Tensor disposed - restarting people counter');
+    status.textContent = `People detected: ${people.length}`;
+  } catch (err) {
+    if (err.message.includes('Tensor is disposed')) {
+      console.warn('Tensor disposed - reinitializing');
       isCounting = false;
       init({ videoElement: video, canvasElement: canvas, statusElement: status });
       return;
     }
-    console.error('People counting error:', error);
+    console.error('Counting error:', err);
   }
 
-  requestAnimationFrame(() => countPeople(video, canvas, status));
+  requestAnimationFrame(() => runPeopleCounter(video, canvas, status));
 }
 
 function renderPeople(canvas, people) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  people.forEach(person => {
-    const [x, y, width, height] = person.bbox;
+
+  people.forEach(p => {
+    const [x, y, width, height] = p.bbox;
     
-    // Draw bounding box
+    // Draw box
     ctx.strokeStyle = '#00FF00';
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, width, height);
-    
+
     // Draw label
     ctx.fillStyle = '#00FF00';
-    ctx.fillText(`Person (${Math.round(person.score * 100)}%)`, x, y > 10 ? y - 5 : y + 15);
+    const label = `Person (${Math.round(p.score * 100)}%)`;
+    ctx.font = '14px Arial';
+    ctx.fillText(label, x, y > 10 ? y - 5 : y + 15);
   });
 }
 
 export function cleanup() {
   isCounting = false;
-  peopleCount = 0;
-  if (model) {
-    model.dispose();
-  }
+  if (model) model.dispose();
 }
