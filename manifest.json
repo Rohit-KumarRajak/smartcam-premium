@@ -1,0 +1,10 @@
+{
+  "name": "SmartCam Premium",
+  "short_name": "SmartCam",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#4361ee",
+  "theme_color": "#3f37c9",
+  "description": "AI-Powered Computer Vision Tools",
+  "orientation": "portrait-primary"
+}
