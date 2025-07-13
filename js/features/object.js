@@ -1,88 +1,80 @@
 let model;
-let lastDetectionTime = 0;
-const detectionInterval = 500; // ms
 let isDetecting = false;
+let lastDetectionTime = 0;
+const detectionInterval = 300;
 
 export async function init({ videoElement, canvasElement, statusElement }) {
   statusElement.textContent = 'Loading object detection model...';
-  
+
   try {
-    // Dispose previous model if exists
-    if (model) {
-      await model.dispose();
-    }
-    
+    if (model) await model.dispose();
+
     model = await cocoSsd.load();
-    statusElement.textContent = 'Object detection ready. Point camera at objects.';
+    statusElement.textContent = 'Object detection ready. Point the camera at objects.';
+
     isDetecting = true;
-    detectObjects(videoElement, canvasElement, statusElement);
-  } catch (error) {
+    detectLoop(videoElement, canvasElement, statusElement);
+  } catch (err) {
+    console.error('Model load failed:', err);
     statusElement.textContent = 'Failed to load object detection';
     statusElement.style.color = '#f00';
-    console.error(error);
   }
 }
 
-async function detectObjects(video, canvas, status) {
-  if (!isDetecting || video.paused || video.ended) {
-    return;
-  }
+async function detectLoop(video, canvas, status) {
+  if (!isDetecting || video.paused || video.ended) return;
 
   const now = Date.now();
   if (now - lastDetectionTime < detectionInterval) {
-    requestAnimationFrame(() => detectObjects(video, canvas, status));
+    requestAnimationFrame(() => detectLoop(video, canvas, status));
     return;
   }
   lastDetectionTime = now;
 
   try {
     const predictions = await model.detect(video);
-    renderPredictions(canvas, predictions, status);
-  } catch (error) {
-    if (error.message.includes('Tensor is disposed')) {
-      console.warn('Tensor disposed during detection - restarting detection');
-      isDetecting = false;
-      init({ videoElement: video, canvasElement: canvas, statusElement: status });
-      return;
-    }
-    console.error('Detection error:', error);
+    drawPredictions(canvas, predictions);
+    updateStatus(status, predictions);
+  } catch (err) {
+    console.error('Detection error:', err);
+    status.textContent = 'Detection error';
   }
 
-  requestAnimationFrame(() => detectObjects(video, canvas, status));
+  requestAnimationFrame(() => detectLoop(video, canvas, status));
 }
 
-function renderPredictions(canvas, predictions, status) {
+function drawPredictions(canvas, predictions) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  let detectedObjects = [];
-  
+
   predictions.forEach(pred => {
-    if (pred.score > 0.65) {
-      const [x, y, width, height] = pred.bbox;
-      
-      // Draw bounding box
-      ctx.strokeStyle = '#00FF00';
+    if (pred.score > 0.6) {
+      const [x, y, w, h] = pred.bbox;
+      ctx.strokeStyle = '#00ff00';
       ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, width, height);
-      
-      // Draw label
-      ctx.fillStyle = '#00FF00';
-      const text = `${pred.class} (${Math.round(pred.score * 100)}%)`;
-      ctx.fillText(text, x, y > 10 ? y - 5 : y + 15);
-      
-      detectedObjects.push(pred.class);
+      ctx.strokeRect(x, y, w, h);
+
+      const label = `${pred.class} (${Math.round(pred.score * 100)}%)`;
+      ctx.fillStyle = '#00ff00';
+      ctx.font = '16px sans-serif';
+      ctx.fillText(label, x, y > 20 ? y - 8 : y + 20);
     }
   });
-  
-  if (detectedObjects.length > 0) {
-    status.textContent = `Detected: ${detectedObjects.join(', ')}`;
+}
+
+function updateStatus(status, predictions) {
+  const objects = predictions
+    .filter(p => p.score > 0.6)
+    .map(p => p.class);
+
+  if (objects.length > 0) {
+    status.textContent = `Detected: ${[...new Set(objects)].join(', ')}`;
+  } else {
+    status.textContent = 'No objects detected';
   }
 }
 
 export function cleanup() {
   isDetecting = false;
-  if (model) {
-    model.dispose();
-  }
+  if (model) model.dispose();
 }
