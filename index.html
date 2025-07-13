@@ -1,44 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SmartCam Premium</title>
-  <link rel="stylesheet" href="css/style.css">
-  
-  <!-- TensorFlow.js and models -->
+  <link rel="stylesheet" href="css/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@0.0.6"></script>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --secondary: #2563eb;
+      --dark: #111827;
+      --light: #f9fafb;
+      --accent: #4f46e5;
+      --error: #dc2626;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--light);
+      color: var(--dark);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      padding: 1.5rem;
+      text-align: center;
+      color: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      padding: 1.5rem;
+      flex: 1;
+    }
+
+    .feature-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: 0.3s;
+      cursor: pointer;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      border: 2px solid var(--accent);
+    }
+
+    .feature-icon {
+      font-size: 2.5rem;
+    }
+
+    .feature-name {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    .feature-container {
+      display: none;
+      padding: 1rem;
+      flex: 1;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      max-height: calc(100vh - 180px);
+      background: black;
+      overflow: hidden;
+    }
+
+    video, canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem;
+    }
+
+    .toolbar button {
+      padding: 0.75rem 1.25rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+    }
+
+    .toolbar button:hover {
+      opacity: 0.9;
+    }
+
+    .message-box {
+      text-align: center;
+      padding: 0.75rem;
+      color: var(--dark);
+      font-size: 1rem;
+    }
+
+    .app-footer {
+      text-align: center;
+      padding: 1rem;
+      background: var(--primary);
+      color: white;
+    }
+
+    .founder-img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .video-container {
+        max-height: 60vh;
+      }
+    }
+  </style>
 </head>
 <body>
-  <header class="app-header">
+  <header>
     <h1>SmartCam Premium</h1>
-    <p class="app-tagline">AI-Powered Vision Tools</p>
+    <p>AI-Powered Vision Tools</p>
   </header>
 
   <main>
     <div id="feature-grid" class="feature-grid"></div>
-    
+
     <div id="feature-container" class="feature-container">
       <div class="video-container">
         <video id="video-feed" autoplay playsinline muted></video>
         <canvas id="processing-canvas"></canvas>
       </div>
-      
+
       <div class="toolbar">
-        <button id="flip-btn" class="btn-flip">🔄 Flip Camera</button>
-        <button id="back-btn" class="btn-back">← Back to Menu</button>
+        <button id="flip-btn">🔄 Flip Camera</button>
+        <button id="back-btn">← Back</button>
       </div>
-      
+
       <div class="message-box">
-        <div id="status-message"></div>
+        <span id="status-message">Feature status will appear here</span>
       </div>
     </div>
   </main>
 
   <footer class="app-footer">
-    <img src="assets/PF.png" alt="Founder" class="founder-img">
+    <img src="assets/PF.png" alt="Founder" class="founder-img" />
     <p>Created by Rohit Kumar Rajak</p>
   </footer>
 
