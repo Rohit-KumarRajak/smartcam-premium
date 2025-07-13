@@ -94,16 +94,31 @@ class SmartCamApp {
     }
   }
 
-  async flipCamera() {
-    this.showStatus("Switching camera...");
-    try {
-      await this.cameraManager.flip();
-      this.showStatus("Camera switched");
-    } catch (error) {
-      this.showError("Failed to switch camera");
-      console.error(error);
+ async flipCamera() {
+  this.showStatus("Switching camera...");
+  try {
+    if (this.currentFeature?.cleanup) {
+      await this.currentFeature.cleanup();
     }
+
+    await this.cameraManager.flip();
+
+    if (this.currentFeature?.init) {
+      await this.currentFeature.init({
+        videoElement: this.ui.videoFeed,
+        canvasElement: this.ui.processingCanvas,
+        statusElement: this.ui.statusMessage,
+        getCamera: () => this.cameraManager.getStream()
+      });
+    }
+
+    this.showStatus("Camera switched. Detection resumed.");
+  } catch (error) {
+    this.showError("Failed to switch camera");
+    console.error(error);
   }
+}
+
 
   returnToGrid() {
     this.isFeatureActive = false;
